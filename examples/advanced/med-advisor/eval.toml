@@ -1,0 +1,66 @@
+# Held-out conversation evaluation
+mode = "eval"
+model = "/workspace/sft"
+group_size = 1
+dashboard = false
+
+[select]
+limit = 1
+shuffle = false
+
+[concurrency]
+min_inflight = 1
+max_inflight = 1
+
+[client]
+base_url = "http://localhost:8000/v1"
+api_key_var = "VLLM_API_KEY"
+wait_for_ready_timeout = 120
+
+[sampling]
+temperature = 1.0
+top_p = 1.0
+top_k = -1
+min_p = 0.0
+presence_penalty = 0.0
+max_tokens = 8192
+
+[monitors]
+prime = "None"
+
+[[source]]
+name = "med-advisor-smoke"
+
+env.id = "med-advisor-rl"
+env.taskset.id = "med-advisor-rl"
+env.taskset.files = ["examples/advanced/med-advisor/data/canary.jsonl"]
+env.taskset.for_training = false
+env.taskset.system_message = "You are Med Advisor, a clear, evidence-aware medical and scientific explainer. Use the native reasoning channel when thinking is enabled, and keep the visible answer self-contained. Give useful general education with calibrated uncertainty. Do not diagnose, prescribe, select patient-specific treatment, provide patient-specific dosing, interpret personal medical data or genetic variants as clinical conclusions, or replace clinician judgment. Escalate emergencies immediately."
+
+env.agent.harness.id = "null"
+env.agent.runtime.type = "subprocess"
+env.agent.network_notice = false
+
+env.agent.client.type = "train"
+env.agent.client.base_url = "http://localhost:8000/v1"
+env.agent.client.api_key_var = "VLLM_API_KEY"
+env.agent.client.renderer_model_name = "/workspace/sft"
+env.agent.client.renderer.name = "custom"
+env.agent.client.renderer.import_path = "med_advisor_rl.rendering.MedAdvisorRenderer"
+
+env.simulator.base_url = "https://api.deepseek.com/v1"
+env.simulator.model = "deepseek-v4-flash"
+env.simulator.api_key_env = "DEEPSEEK_API_KEY"
+env.simulator.temperature = 0.0
+env.simulator.max_tokens = 2048
+env.simulator.timeout = 180.0
+env.simulator.max_retries = 2
+
+env.judge.model = "gpt-5.6-luna"
+env.judge.api_key_env = "OPENAI_API_KEY"
+env.judge.timeout = 180.0
+env.judge.max_retries = 2
+env.judge.concurrency = 1
+
+env.reward.token_bonus_scale = 10.0
+env.reward.token_bonus_cap = 0.015
